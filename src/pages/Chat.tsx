@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
@@ -19,7 +19,7 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const current = currentId ? getConversation(currentId) : null;
-  const messages = current?.messages ?? [];
+  const messages = useMemo(() => current?.messages ?? [], [current?.messages]);
 
   const refreshConversations = () => setConversations(getConversations());
 
