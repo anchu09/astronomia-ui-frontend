@@ -6,8 +6,8 @@ COPY package.json package-lock.json* ./
 RUN npm ci
 
 COPY . .
-# El navegador del usuario llama al BFF en localhost:3000
-ENV VITE_API_URL=http://localhost:3000
+# En Windows/Docker a veces localhost falla; 127.0.0.1 suele ser más fiable
+ENV VITE_API_URL=http://127.0.0.1:3000
 RUN npm run build
 
 # Serve con nginx
