@@ -61,6 +61,21 @@ export function appendMessage(conversationId: string, message: Message): void {
   save(list);
 }
 
+export function updateMessage(
+  conversationId: string,
+  messageId: string,
+  update: Partial<Pick<Message, "content" | "imageUrl">>
+): void {
+  const list = load();
+  const conv = list.find((c) => c.id === conversationId);
+  if (!conv) return;
+  const msg = conv.messages.find((m) => m.id === messageId);
+  if (!msg) return;
+  Object.assign(msg, update);
+  conv.updatedAt = Date.now();
+  save(list);
+}
+
 export function deleteConversation(id: string): void {
   save(load().filter((c) => c.id !== id));
 }

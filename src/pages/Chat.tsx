@@ -7,8 +7,9 @@ import {
   getConversation,
   createConversation,
   appendMessage,
+  updateMessage,
 } from "@/lib/conversations";
-import { sendMessage } from "@/lib/api";
+import { sendMessageStream } from "@/lib/api";
 import type { Conversation, Message } from "@/types/chat";
 
 export default function Chat() {
@@ -54,28 +55,40 @@ export default function Chat() {
     appendMessage(convId, userMessage);
     refreshConversations();
 
+    const assistantId = crypto.randomUUID();
+    const assistantMessage: Message = { id: assistantId, role: "assistant", content: "…" };
+    appendMessage(convId, assistantMessage);
+    refreshConversations();
+
     setLoading(true);
-    const history = (getConversation(convId)?.messages ?? [])
-      .filter((m) => m.role === "user" || m.role === "assistant")
+    const conv = getConversation(convId);
+    const history = (conv?.messages ?? [])
+      .filter((m) => (m.role === "user" || m.role === "assistant") && m.id !== assistantId)
       .map((m) => ({ role: m.role, content: m.content }));
 
+    const base = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+
     try {
-      const reply = await sendMessage(text, convId, history);
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: reply.summary,
-        ...(reply.imageUrl && { imageUrl: reply.imageUrl }),
-      };
-      appendMessage(convId, assistantMessage);
-      refreshConversations();
+      await sendMessageStream(text, convId, history, (event) => {
+        if (event.type === "status") {
+          updateMessage(convId, assistantId, { content: event.message });
+        } else if (event.type === "summary") {
+          updateMessage(convId, assistantId, { content: event.summary });
+        } else if (event.type === "artifacts" && base) {
+          updateMessage(convId, assistantId, {
+            imageUrl: `${base}/artifacts/${event.request_id}/image`,
+          });
+        } else if (event.type === "end" && event.summary) {
+          updateMessage(convId, assistantId, { content: event.summary });
+        } else if (event.type === "error") {
+          updateMessage(convId, assistantId, { content: `Error: ${event.message}` });
+        }
+        refreshConversations();
+      });
     } catch (err) {
-      const errorMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
+      updateMessage(convId, assistantId, {
         content: `Error: ${err instanceof Error ? err.message : "No se pudo obtener respuesta."}`,
-      };
-      appendMessage(convId, errorMessage);
+      });
       refreshConversations();
     } finally {
       setLoading(false);

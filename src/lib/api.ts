@@ -1,8 +1,3 @@
-/**
- * Placeholder para el backend de análisis (astronomIA) o el BFF/n8n.
- * Cuando tengas la API, define VITE_API_URL en .env y descomenta la llamada real.
- */
-
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 export interface AnalyzePayload {
@@ -23,6 +18,13 @@ export interface SendMessageResult {
   summary: string;
   imageUrl?: string;
 }
+
+export type StreamEvent =
+  | { type: "status"; message: string }
+  | { type: "summary"; summary: string }
+  | { type: "artifacts"; request_id: string }
+  | { type: "end"; request_id: string; status: string; summary?: string }
+  | { type: "error"; message: string };
 
 export async function sendMessage(
   message: string,
@@ -70,4 +72,72 @@ export async function sendMessage(
     summary: data.summary,
     ...(imageUrl && { imageUrl }),
   };
+}
+
+export async function sendMessageStream(
+  message: string,
+  conversationId: string,
+  history: { role: "user" | "assistant"; content: string }[],
+  onEvent: (event: StreamEvent) => void
+): Promise<void> {
+  const base = API_BASE.replace(/\/$/, "");
+  if (!base) {
+    onEvent({ type: "error", message: "VITE_API_URL no configurado." });
+    return;
+  }
+
+  const requestId = `${conversationId}-${Date.now()}`;
+  const body: AnalyzePayload = {
+    request_id: requestId,
+    message,
+    messages: history.length > 0 ? history : undefined,
+  };
+
+  const res = await fetch(`${base}/analyze/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    onEvent({ type: "error", message: `Error ${res.status}: ${text.slice(0, 200)}` });
+    return;
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) {
+    onEvent({ type: "error", message: "No se pudo leer el stream." });
+    return;
+  }
+
+  const dec = new TextDecoder();
+  let buffer = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += dec.decode(value, { stream: true });
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() ?? "";
+      for (const part of parts) {
+        let eventType = "message";
+        let data: string | null = null;
+        for (const line of part.split("\n")) {
+          if (line.startsWith("event: ")) eventType = line.slice(7).trim();
+          if (line.startsWith("data: ")) data = line.slice(6);
+        }
+        if (data != null) {
+          try {
+            const parsed = JSON.parse(data) as StreamEvent;
+            onEvent(parsed);
+          } catch {
+            // ignore malformed
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }
