@@ -1,0 +1,7 @@
+services:
+  frontend:
+    build: .
+    container_name: astronomia-ui-frontend
+    ports:
+      - "5173:80"
+    # Sin variables extra: VITE_API_URL se fijó en build (http://localhost:3000)

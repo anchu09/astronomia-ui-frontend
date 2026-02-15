@@ -64,7 +64,8 @@ export default function Chat() {
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: reply,
+        content: reply.summary,
+        ...(reply.imageUrl && { imageUrl: reply.imageUrl }),
       };
       appendMessage(convId, assistantMessage);
       refreshConversations();

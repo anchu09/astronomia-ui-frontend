@@ -29,6 +29,15 @@ export function ChatMessage({ message }: ChatMessageProps) {
         <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
           {message.content}
         </div>
+        {message.imageUrl && (
+          <div className="mt-3 rounded-lg overflow-hidden border border-border">
+            <img
+              src={message.imageUrl}
+              alt="Imagen del análisis"
+              className="max-w-full h-auto block"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
