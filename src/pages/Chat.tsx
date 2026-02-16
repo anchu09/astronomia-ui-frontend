@@ -81,13 +81,13 @@ export default function Chat() {
         } else if (event.type === "end" && event.summary) {
           updateMessage(convId, assistantId, { content: event.summary });
         } else if (event.type === "error") {
-          updateMessage(convId, assistantId, { content: `Error: ${event.message}` });
+          updateMessage(convId, assistantId, { content: event.message });
         }
         refreshConversations();
       });
     } catch (err) {
       updateMessage(convId, assistantId, {
-        content: `Error: ${err instanceof Error ? err.message : "No se pudo obtener respuesta."}`,
+        content: err instanceof Error ? err.message : "No se pudo obtener respuesta.",
       });
       refreshConversations();
     } finally {
