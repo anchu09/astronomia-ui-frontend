@@ -33,9 +33,7 @@ export async function sendMessage(
 ): Promise<SendMessageResult> {
   const base = API_BASE.replace(/\/$/, "");
   if (!base) {
-    return {
-      summary: `[Demo] Has dicho: «${message}». Cuando conectes el backend (astronomIA o n8n), la respuesta real aparecerá aquí. Configura VITE_API_URL en .env para llamar a la API.`,
-    };
+    return { summary: `[Sin API] Mensaje: «${message}». Configura VITE_API_URL.` };
   }
 
   const requestId = `${conversationId}-${Date.now()}`;
@@ -127,10 +125,9 @@ export async function sendMessageStream(
         }
         if (data != null) {
           try {
-            const parsed = JSON.parse(data) as StreamEvent;
-            onEvent(parsed);
+            onEvent(JSON.parse(data) as StreamEvent);
           } catch {
-            // ignore malformed
+            continue;
           }
         }
       }

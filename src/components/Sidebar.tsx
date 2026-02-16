@@ -1,5 +1,4 @@
-import { useAuth } from "@/lib/auth";
-import { clearEmail } from "@/lib/auth";
+import { useAuth, clearEmail } from "@/lib/auth";
 import { useNavigate } from "react-router-dom";
 import type { Conversation } from "@/types/chat";
 

@@ -120,9 +120,7 @@ export default function Chat() {
                 </div>
                 <h2 className="text-xl font-semibold text-foreground mb-2">astronomIA</h2>
                 <p className="text-muted-foreground max-w-md text-sm">
-                  Pregunta por una galaxia por nombre o coordenadas, pide imágenes en visible,
-                  infrarrojo o UV. Cuando conectes el backend de análisis, aquí llegarán los
-                  resultados reales.
+                  Pregunta por galaxias por nombre o coordenadas. Pide imágenes en visible, infrarrojo o UV.
                 </p>
               </div>
             ) : (

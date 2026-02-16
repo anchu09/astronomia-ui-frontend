@@ -1,7 +1,7 @@
 const EMAIL_KEY = "astronomia_demo_email";
 
 export function useAuth() {
-  const email = typeof window !== "undefined" ? localStorage.getItem(EMAIL_KEY) : null;
+  const email = localStorage.getItem(EMAIL_KEY);
   return { email, isAuthenticated: !!email };
 }
 

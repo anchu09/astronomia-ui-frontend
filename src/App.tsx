@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "./lib/auth";
-import Login from "./pages/Login";
-import Chat from "./pages/Chat";
+import { useAuth } from "@/lib/auth";
+import Login from "@/pages/Login";
+import Chat from "@/pages/Chat";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { email } = useAuth();

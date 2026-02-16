@@ -50,9 +50,6 @@ export default function Login() {
             autoComplete="email"
           />
           {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
-          <p className="mt-3 text-xs text-muted-foreground">
-            Demo: no hay verificación. Solo introduce tu email para acceder a tus chats.
-          </p>
           <button
             type="submit"
             className="mt-6 w-full h-12 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity"
