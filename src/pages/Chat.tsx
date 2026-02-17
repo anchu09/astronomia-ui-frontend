@@ -74,10 +74,9 @@ export default function Chat() {
           updateMessage(convId, assistantId, { content: event.message });
         } else if (event.type === "summary") {
           updateMessage(convId, assistantId, { content: event.summary });
-        } else if (event.type === "artifacts" && base) {
-          updateMessage(convId, assistantId, {
-            imageUrl: `${base}/artifacts/${event.request_id}/image`,
-          });
+        } else if (event.type === "artifacts") {
+          const imageUrl = event.image_url ?? (base ? `${base}/artifacts/${event.request_id}/image` : undefined);
+          if (imageUrl) updateMessage(convId, assistantId, { imageUrl });
         } else if (event.type === "end" && event.summary) {
           updateMessage(convId, assistantId, { content: event.summary });
         } else if (event.type === "error") {

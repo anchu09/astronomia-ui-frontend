@@ -22,7 +22,7 @@ export interface SendMessageResult {
 export type StreamEvent =
   | { type: "status"; message: string }
   | { type: "summary"; summary: string }
-  | { type: "artifacts"; request_id: string }
+  | { type: "artifacts"; request_id: string; image_url?: string }
   | { type: "end"; request_id: string; status: string; summary?: string }
   | { type: "error"; message: string };
 
