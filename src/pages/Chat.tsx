@@ -10,7 +10,7 @@ import {
   updateMessage,
 } from "@/lib/conversations";
 import { sendMessageStream } from "@/lib/api";
-import type { Conversation, Message } from "@/types/chat";
+import type { AladinCoordinates, Conversation, HstJwstInfo, Message, ObjectInfo } from "@/types/chat";
 
 export default function Chat() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -76,9 +76,17 @@ export default function Chat() {
           updateMessage(convId, assistantId, { content: event.summary });
         } else if (event.type === "artifacts") {
           const imageUrl = event.image_url ?? (base ? `${base}/artifacts/${event.request_id}/image` : undefined);
-          if (imageUrl) updateMessage(convId, assistantId, { imageUrl });
-        } else if (event.type === "end" && event.summary) {
-          updateMessage(convId, assistantId, { content: event.summary });
+          const patch: Partial<Pick<Message, "imageUrl" | "coordinates" | "objectInfo" | "hstJwst">> = {};
+          if (imageUrl) patch.imageUrl = imageUrl;
+          if (event.coordinates) patch.coordinates = event.coordinates as AladinCoordinates;
+          if (event.object_info) patch.objectInfo = event.object_info as ObjectInfo;
+          if (event.hst_jwst) patch.hstJwst = event.hst_jwst as unknown as HstJwstInfo;
+          if (Object.keys(patch).length > 0) updateMessage(convId, assistantId, patch);
+        } else if (event.type === "end") {
+          if (event.summary) updateMessage(convId, assistantId, { content: event.summary });
+          if (event.coordinates) updateMessage(convId, assistantId, { coordinates: event.coordinates as AladinCoordinates });
+          if (event.object_info) updateMessage(convId, assistantId, { objectInfo: event.object_info as ObjectInfo });
+          if (event.hst_jwst) updateMessage(convId, assistantId, { hstJwst: event.hst_jwst as unknown as HstJwstInfo });
         } else if (event.type === "error") {
           updateMessage(convId, assistantId, { content: event.message });
         }

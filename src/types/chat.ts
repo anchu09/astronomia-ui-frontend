@@ -1,10 +1,39 @@
 export type MessageRole = "user" | "assistant";
 
+export interface AladinCoordinates {
+  ra_deg: number;
+  dec_deg: number;
+  survey_used: string;
+  hips_id?: string;
+  size_arcmin: number;
+}
+
+export interface ObjectInfo {
+  main_id?: string;
+  otype?: string;
+  otype_long?: string;
+  morph_type?: string;
+  rvz_radvel?: number;
+  rvz_redshift?: number;
+  sp_type?: string;
+}
+
+export interface HstJwstInfo {
+  collection: string;
+  obs_id: string;
+  instrument: string;
+  filters: string;
+  jpeg_url?: string | null;
+}
+
 export interface Message {
   id: string;
   role: MessageRole;
   content: string;
   imageUrl?: string;
+  coordinates?: AladinCoordinates;
+  objectInfo?: ObjectInfo;
+  hstJwst?: HstJwstInfo;
 }
 
 export interface Conversation {

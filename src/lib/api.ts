@@ -19,11 +19,19 @@ export interface SendMessageResult {
   imageUrl?: string;
 }
 
+export interface CoordinatesPayload {
+  ra_deg: number;
+  dec_deg: number;
+  survey_used: string;
+  hips_id?: string;
+  size_arcmin: number;
+}
+
 export type StreamEvent =
   | { type: "status"; message: string }
   | { type: "summary"; summary: string }
-  | { type: "artifacts"; request_id: string; image_url?: string }
-  | { type: "end"; request_id: string; status: string; summary?: string }
+  | { type: "artifacts"; request_id: string; image_url?: string; coordinates?: CoordinatesPayload; object_info?: Record<string, unknown>; hst_jwst?: Record<string, unknown> }
+  | { type: "end"; request_id: string; status: string; summary?: string; coordinates?: CoordinatesPayload; object_info?: Record<string, unknown>; hst_jwst?: Record<string, unknown> }
   | { type: "error"; message: string };
 
 export async function sendMessage(

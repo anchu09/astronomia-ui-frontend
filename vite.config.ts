@@ -12,4 +12,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    exclude: ["aladin-lite"],
+  },
+  assetsInclude: ["**/*.wasm"],
 });
