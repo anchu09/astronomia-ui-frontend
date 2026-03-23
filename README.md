@@ -6,10 +6,12 @@ Interfaz de chat para análisis de galaxias. El usuario escribe consultas en len
 
 - **Chat conversacional** con historial de conversaciones (localStorage).
 - **Streaming SSE** de respuestas del backend: estados de progreso, resumen, imagen y coordenadas.
-- **Visor interactivo** (Aladin Lite v3): exploración del cielo con zoom, pan y cambio de survey en vivo. 13 surveys agrupados por banda electromagnética (rayos X, UV, óptico, IR, radio).
+- **Visor interactivo** (Aladin Lite v3): exploración del cielo con zoom, pan y cambio de survey en vivo. 11 surveys agrupados por banda electromagnética (rayos X, UV, óptico, IR, radio).
 - **Metadatos SIMBAD**: tipo de objeto, morfología, velocidad radial, redshift — mostrados como badges bajo el mensaje.
 - **Indicador HST/JWST**: si existen observaciones del Hubble o JWST para la galaxia, se muestra un badge con colección, instrumento y filtros, con link al preview.
 - **Imágenes estáticas** del análisis (segmentación, medidas) junto al visor interactivo.
+- **Sidebar colapsable** con lista de conversaciones y botón de cerrar sesión.
+- **Auto-título** de conversación (primeros 50 caracteres del primer mensaje).
 - **Login demo** por email (localStorage, sin autenticación real).
 
 ## Requisitos
@@ -23,7 +25,10 @@ Interfaz de chat para análisis de galaxias. El usuario escribe consultas en len
 npm install
 cp .env.example .env   # o crear .env con VITE_API_URL
 npm run dev
+npm run lint           # ESLint
 ```
+
+El proyecto usa el alias `@` → `./src` para imports (configurado en Vite y tsconfig).
 
 Abre `http://localhost:5173`. Login con cualquier email.
 
@@ -54,17 +59,19 @@ npm run preview    # previsualizar el build
 docker compose up --build   # nginx en :5173
 ```
 
+> **Nota:** El Dockerfile fija `VITE_API_URL=http://127.0.0.1:3000` en build time. Para cambiar la URL del BFF en Docker, modificar el `ENV` en el Dockerfile o el `docker-compose.yml`.
+
 ## Estructura
 
 ```
 src/
 ├── components/
 │   ├── AladinViewer.tsx   # Visor interactivo Aladin Lite (WebGL2/WASM)
-│   ├── ChatMessage.tsx    # Mensaje con imagen, visor, badges SIMBAD/HST (lazy-loaded)
+│   ├── ChatMessage.tsx    # Mensaje con imagen, badges SIMBAD/HST. AladinViewer se carga lazy dentro
 │   ├── ChatInput.tsx      # Input de texto
 │   └── Sidebar.tsx        # Lista de conversaciones
 ├── lib/
-│   ├── api.ts             # Cliente SSE: parseo de eventos (status, summary, artifacts, end, error)
+│   ├── api.ts             # Cliente SSE (sendMessageStream), tipos (AnalyzePayload, StreamEvent). Incluye sendMessage() síncrono (sin usar)
 │   ├── conversations.ts   # CRUD de conversaciones en localStorage
 │   └── auth.ts            # Login demo (email en localStorage)
 ├── pages/
