@@ -46,7 +46,7 @@ const DEFAULT_FOV_DEG = 0.5;
 interface AladinViewerProps {
   coordinates?: AladinCoordinates;
   objectName?: string;
-  onViewerReady?: (getSnapshot: () => ViewSnapshot | null) => void;
+  onViewerReady?: (getSnapshot: () => Promise<ViewSnapshot | null>) => void;
 }
 
 export function AladinViewer({ coordinates, objectName, onViewerReady }: AladinViewerProps) {
@@ -97,11 +97,20 @@ export function AladinViewer({ coordinates, objectName, onViewerReady }: AladinV
         aladinRef.current = aladin;
         setLoading(false);
         if (onViewerReady) {
-          onViewerReady(() => {
+          onViewerReady(async () => {
             if (!aladinRef.current) return null;
             const [ra, dec] = aladinRef.current.getRaDec();
             const [fovX] = aladinRef.current.getFov();
-            return { ra_deg: ra, dec_deg: dec, size_arcmin: fovX * 60, hips_id: activeSurveyRef.current };
+            let image_data: string | undefined;
+            try {
+              // Esperar al próximo frame de animación para que WebGL tenga el buffer poblado
+              await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+              const canvas = containerRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
+              if (canvas) image_data = canvas.toDataURL("image/jpeg", 0.85);
+            } catch {
+              // Canvas tainted por CORS — no se puede capturar
+            }
+            return { ra_deg: ra, dec_deg: dec, size_arcmin: fovX * 60, hips_id: activeSurveyRef.current, image_data };
           });
         }
       } catch (err) {

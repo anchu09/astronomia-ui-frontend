@@ -52,7 +52,7 @@ const AladinViewer = lazy(() =>
 
 interface ChatMessageProps {
   message: Message;
-  onViewerReady?: (getSnapshot: () => ViewSnapshot | null) => void;
+  onViewerReady?: (getSnapshot: () => Promise<ViewSnapshot | null>) => void;
 }
 
 export function ChatMessage({ message, onViewerReady }: ChatMessageProps) {
@@ -97,7 +97,7 @@ export function ChatMessage({ message, onViewerReady }: ChatMessageProps) {
             />
           </div>
         )}
-        {message.coordinates && (
+        {message.coordinates && !message.imageUrl && (
           <Suspense
             fallback={
               <div className="mt-3 p-3 rounded-lg bg-muted/40 text-muted-foreground text-xs animate-pulse">

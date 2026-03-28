@@ -19,7 +19,7 @@ export default function Chat() {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // Getter del visor activo: se actualiza cuando cualquier AladinViewer se inicializa
-  const viewerGetterRef = useRef<(() => ViewSnapshot | null) | null>(null);
+  const viewerGetterRef = useRef<(() => Promise<ViewSnapshot | null>) | null>(null);
 
   const current = currentId ? getConversation(currentId) : null;
   const messages = useMemo(() => current?.messages ?? [], [current?.messages]);
@@ -41,7 +41,7 @@ export default function Chat() {
   };
 
   // Callback estable que cada AladinViewer llama cuando está listo
-  const handleViewerReady = useCallback((getter: () => ViewSnapshot | null) => {
+  const handleViewerReady = useCallback((getter: () => Promise<ViewSnapshot | null>) => {
     viewerGetterRef.current = getter;
   }, []);
 
@@ -75,7 +75,7 @@ export default function Chat() {
 
     const base = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
     // Incluir el estado actual del visor si hay uno activo
-    const viewerSnapshot = viewerGetterRef.current?.() ?? undefined;
+    const viewerSnapshot = viewerGetterRef.current ? (await viewerGetterRef.current() ?? undefined) : undefined;
 
     try {
       await sendMessageStream(text, convId, history, (event) => {
@@ -137,7 +137,7 @@ export default function Chat() {
                 </div>
                 <h2 className="text-xl font-semibold text-foreground mb-2">astronomIA</h2>
                 <p className="text-muted-foreground max-w-md text-sm">
-                  Pregunta por galaxias por nombre o coordenadas. Pide imágenes en visible, infrarrojo o UV.
+                  Visualiza y analiza galaxias en el visor interactivo, o planifica tus noches de observación desde cualquier lugar del mundo.
                 </p>
               </div>
             ) : (

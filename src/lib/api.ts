@@ -9,6 +9,7 @@ export interface AnalyzePayload {
   view_dec_deg?: number;
   view_size_arcmin?: number;
   view_hips_id?: string;
+  image_data?: string;
 }
 
 export interface AnalyzeResponse {
@@ -39,7 +40,7 @@ export async function sendMessageStream(
   conversationId: string,
   history: { role: "user" | "assistant"; content: string }[],
   onEvent: (event: StreamEvent) => void,
-  viewSnapshot?: { ra_deg: number; dec_deg: number; size_arcmin: number; hips_id: string }
+  viewSnapshot?: { ra_deg: number; dec_deg: number; size_arcmin: number; hips_id: string; image_data?: string }
 ): Promise<void> {
   const base = API_BASE.replace(/\/$/, "");
   if (!base) {
@@ -58,6 +59,7 @@ export async function sendMessageStream(
       view_dec_deg: viewSnapshot.dec_deg,
       view_size_arcmin: viewSnapshot.size_arcmin,
       view_hips_id: viewSnapshot.hips_id,
+      ...(viewSnapshot.image_data && { image_data: viewSnapshot.image_data }),
     }),
   };
 
