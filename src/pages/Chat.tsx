@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
@@ -10,7 +10,7 @@ import {
   updateMessage,
 } from "@/lib/conversations";
 import { sendMessageStream } from "@/lib/api";
-import type { AladinCoordinates, Conversation, HstJwstInfo, Message, ObjectInfo } from "@/types/chat";
+import type { AladinCoordinates, Conversation, HstJwstInfo, Message, ObjectInfo, ViewSnapshot } from "@/types/chat";
 
 export default function Chat() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -18,6 +18,8 @@ export default function Chat() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Getter del visor activo: se actualiza cuando cualquier AladinViewer se inicializa
+  const viewerGetterRef = useRef<(() => ViewSnapshot | null) | null>(null);
 
   const current = currentId ? getConversation(currentId) : null;
   const messages = useMemo(() => current?.messages ?? [], [current?.messages]);
@@ -37,6 +39,11 @@ export default function Chat() {
   const handleSelectConversation = (id: string) => {
     setCurrentId(id);
   };
+
+  // Callback estable que cada AladinViewer llama cuando está listo
+  const handleViewerReady = useCallback((getter: () => ViewSnapshot | null) => {
+    viewerGetterRef.current = getter;
+  }, []);
 
   const handleSend = async (text: string) => {
     let convId = currentId;
@@ -67,6 +74,8 @@ export default function Chat() {
       .map((m) => ({ role: m.role, content: m.content }));
 
     const base = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+    // Incluir el estado actual del visor si hay uno activo
+    const viewerSnapshot = viewerGetterRef.current?.() ?? undefined;
 
     try {
       await sendMessageStream(text, convId, history, (event) => {
@@ -87,11 +96,12 @@ export default function Chat() {
           if (event.coordinates) updateMessage(convId, assistantId, { coordinates: event.coordinates as AladinCoordinates });
           if (event.object_info) updateMessage(convId, assistantId, { objectInfo: event.object_info as ObjectInfo });
           if (event.hst_jwst) updateMessage(convId, assistantId, { hstJwst: event.hst_jwst as unknown as HstJwstInfo });
+          if (event.object_name) updateMessage(convId, assistantId, { objectName: event.object_name });
         } else if (event.type === "error") {
           updateMessage(convId, assistantId, { content: event.message });
         }
         refreshConversations();
-      });
+      }, viewerSnapshot);
     } catch (err) {
       updateMessage(convId, assistantId, {
         content: err instanceof Error ? err.message : "No se pudo obtener respuesta.",
@@ -131,7 +141,9 @@ export default function Chat() {
                 </p>
               </div>
             ) : (
-              messages.map((msg) => <ChatMessage key={msg.id} message={msg} />)
+              messages.map((msg) => (
+                <ChatMessage key={msg.id} message={msg} onViewerReady={handleViewerReady} />
+              ))
             )}
             <div ref={messagesEndRef} />
           </div>

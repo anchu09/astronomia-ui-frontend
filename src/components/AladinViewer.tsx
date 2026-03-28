@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { AladinCoordinates } from "@/types/chat";
+import type { AladinCoordinates, ViewSnapshot } from "@/types/chat";
 
 const SURVEY_GROUPS = [
   {
@@ -40,21 +40,36 @@ const SURVEY_GROUPS = [
   },
 ] as const;
 
+const DEFAULT_SURVEY = "CDS/P/DSS2/color";
+const DEFAULT_FOV_DEG = 0.5;
+
 interface AladinViewerProps {
-  coordinates: AladinCoordinates;
+  coordinates?: AladinCoordinates;
+  objectName?: string;
+  onViewerReady?: (getSnapshot: () => ViewSnapshot | null) => void;
 }
 
-export function AladinViewer({ coordinates }: AladinViewerProps) {
+export function AladinViewer({ coordinates, objectName, onViewerReady }: AladinViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const aladinRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeSurvey, setActiveSurvey] = useState<string>(
-    coordinates.hips_id ?? "CDS/P/DSS2/color"
+    coordinates?.hips_id ?? DEFAULT_SURVEY
   );
+  // Ref para que el getter siempre lea el survey actual sin recrearse
+  const activeSurveyRef = useRef(activeSurvey);
+  useEffect(() => { activeSurveyRef.current = activeSurvey; }, [activeSurvey]);
+
+  // Calcula target y fov segun las props disponibles
+  const target = coordinates
+    ? `${coordinates.ra_deg} ${coordinates.dec_deg}`
+    : objectName ?? "";
+  const fovDeg = coordinates ? coordinates.size_arcmin / 60 : DEFAULT_FOV_DEG;
 
   useEffect(() => {
+    if (!target) return;
     let cancelled = false;
 
     async function init() {
@@ -66,11 +81,10 @@ export function AladinViewer({ coordinates }: AladinViewerProps) {
 
         if (cancelled || !containerRef.current) return;
 
-        const fovDeg = coordinates.size_arcmin / 60;
         const aladin = A.aladin(containerRef.current, {
           survey: activeSurvey,
           fov: fovDeg,
-          target: `${coordinates.ra_deg} ${coordinates.dec_deg}`,
+          target,
           projection: "SIN",
           showReticle: true,
           showZoomControl: true,
@@ -82,6 +96,14 @@ export function AladinViewer({ coordinates }: AladinViewerProps) {
 
         aladinRef.current = aladin;
         setLoading(false);
+        if (onViewerReady) {
+          onViewerReady(() => {
+            if (!aladinRef.current) return null;
+            const [ra, dec] = aladinRef.current.getRaDec();
+            const [fovX] = aladinRef.current.getFov();
+            return { ra_deg: ra, dec_deg: dec, size_arcmin: fovX * 60, hips_id: activeSurveyRef.current };
+          });
+        }
       } catch (err) {
         if (!cancelled) {
           console.error("[AladinViewer] init failed:", err);
@@ -97,9 +119,9 @@ export function AladinViewer({ coordinates }: AladinViewerProps) {
       cancelled = true;
       aladinRef.current = null;
     };
-    // Only re-init when coordinates change, not activeSurvey
+    // Only re-init when target/fov change, not activeSurvey
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coordinates.ra_deg, coordinates.dec_deg, coordinates.size_arcmin]);
+  }, [target, fovDeg]);
 
   const handleSurveyChange = useCallback((hipsId: string) => {
     setActiveSurvey(hipsId);
@@ -119,7 +141,7 @@ export function AladinViewer({ coordinates }: AladinViewerProps) {
           </p>
         )}
         <a
-          href={`https://aladin.cds.unistra.fr/AladinLite/?target=${coordinates.ra_deg}+${coordinates.dec_deg}&fov=${(coordinates.size_arcmin / 60).toFixed(4)}&survey=${encodeURIComponent(activeSurvey)}`}
+          href={`https://aladin.cds.unistra.fr/AladinLite/?target=${encodeURIComponent(target)}&fov=${fovDeg.toFixed(4)}&survey=${encodeURIComponent(activeSurvey)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-block mt-1 text-primary underline"
@@ -167,9 +189,15 @@ export function AladinViewer({ coordinates }: AladinViewerProps) {
       </div>
 
       <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
-        <span>RA: {coordinates.ra_deg.toFixed(4)}</span>
-        <span>Dec: {coordinates.dec_deg.toFixed(4)}</span>
-        <span>FoV: {coordinates.size_arcmin}&apos;</span>
+        {coordinates ? (
+          <>
+            <span>RA: {coordinates.ra_deg.toFixed(4)}</span>
+            <span>Dec: {coordinates.dec_deg.toFixed(4)}</span>
+            <span>FoV: {coordinates.size_arcmin}&apos;</span>
+          </>
+        ) : objectName ? (
+          <span>{objectName}</span>
+        ) : null}
       </div>
     </div>
   );
