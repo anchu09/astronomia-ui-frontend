@@ -1,5 +1,5 @@
-import { lazy, Suspense } from "react";
-import type { HstJwstInfo, Message, ObjectInfo } from "@/types/chat";
+import { lazy, Suspense, useState } from "react";
+import type { HstJwstInfo, Message, ObjectInfo, ViewSnapshot } from "@/types/chat";
 
 function ObjectInfoBar({ info }: { info: ObjectInfo }) {
   const items: string[] = [];
@@ -52,10 +52,13 @@ const AladinViewer = lazy(() =>
 
 interface ChatMessageProps {
   message: Message;
+  onViewerReady?: (getSnapshot: () => Promise<ViewSnapshot | null>) => void;
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, onViewerReady }: ChatMessageProps) {
   const isUser = message.role === "user";
+  const [showViewer, setShowViewer] = useState(false);
+  const canShowByName = !message.coordinates && !!message.objectName;
 
   return (
     <div
@@ -94,7 +97,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             />
           </div>
         )}
-        {message.coordinates && (
+        {message.coordinates && !message.imageUrl && (
           <Suspense
             fallback={
               <div className="mt-3 p-3 rounded-lg bg-muted/40 text-muted-foreground text-xs animate-pulse">
@@ -102,8 +105,29 @@ export function ChatMessage({ message }: ChatMessageProps) {
               </div>
             }
           >
-            <AladinViewer coordinates={message.coordinates} />
+            <AladinViewer coordinates={message.coordinates} onViewerReady={onViewerReady} />
           </Suspense>
+        )}
+        {canShowByName && (
+          <>
+            <button
+              onClick={() => setShowViewer((v) => !v)}
+              className="mt-3 px-3 py-1.5 text-xs rounded-lg border border-primary/40 bg-primary/10 text-primary-foreground hover:bg-primary/20 transition-colors"
+            >
+              {showViewer ? "Ocultar visor" : `Visualizar ${message.objectName} en el cielo`}
+            </button>
+            {showViewer && (
+              <Suspense
+                fallback={
+                  <div className="mt-3 p-3 rounded-lg bg-muted/40 text-muted-foreground text-xs animate-pulse">
+                    Cargando visor interactivo...
+                  </div>
+                }
+              >
+                <AladinViewer objectName={message.objectName} onViewerReady={onViewerReady} />
+              </Suspense>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -26,6 +26,14 @@ export interface HstJwstInfo {
   jpeg_url?: string | null;
 }
 
+export interface ViewSnapshot {
+  ra_deg: number;
+  dec_deg: number;
+  size_arcmin: number;
+  hips_id: string;
+  image_data?: string; // canvas capture (base64 JPEG), undefined si CORS lo impide
+}
+
 export interface Message {
   id: string;
   role: MessageRole;
@@ -34,6 +42,7 @@ export interface Message {
   coordinates?: AladinCoordinates;
   objectInfo?: ObjectInfo;
   hstJwst?: HstJwstInfo;
+  objectName?: string;
 }
 
 export interface Conversation {

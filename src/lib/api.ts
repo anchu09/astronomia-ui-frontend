@@ -4,6 +4,12 @@ export interface AnalyzePayload {
   request_id: string;
   message: string;
   messages?: { role: "user" | "assistant"; content: string }[];
+  task?: string;
+  view_ra_deg?: number;
+  view_dec_deg?: number;
+  view_size_arcmin?: number;
+  view_hips_id?: string;
+  image_data?: string;
 }
 
 export interface AnalyzeResponse {
@@ -12,11 +18,6 @@ export interface AnalyzeResponse {
   summary: string;
   results?: Record<string, unknown>;
   artifacts?: { type: string; path: string }[];
-}
-
-export interface SendMessageResult {
-  summary: string;
-  imageUrl?: string;
 }
 
 export interface CoordinatesPayload {
@@ -31,60 +32,15 @@ export type StreamEvent =
   | { type: "status"; message: string }
   | { type: "summary"; summary: string }
   | { type: "artifacts"; request_id: string; image_url?: string; coordinates?: CoordinatesPayload; object_info?: Record<string, unknown>; hst_jwst?: Record<string, unknown> }
-  | { type: "end"; request_id: string; status: string; summary?: string; coordinates?: CoordinatesPayload; object_info?: Record<string, unknown>; hst_jwst?: Record<string, unknown> }
+  | { type: "end"; request_id: string; status: string; summary?: string; coordinates?: CoordinatesPayload; object_info?: Record<string, unknown>; hst_jwst?: Record<string, unknown>; object_name?: string }
   | { type: "error"; message: string };
-
-export async function sendMessage(
-  message: string,
-  conversationId: string,
-  history: { role: "user" | "assistant"; content: string }[]
-): Promise<SendMessageResult> {
-  const base = API_BASE.replace(/\/$/, "");
-  if (!base) {
-    return { summary: `[Sin API] Mensaje: «${message}». Configura VITE_API_URL.` };
-  }
-
-  const requestId = `${conversationId}-${Date.now()}`;
-  const body: AnalyzePayload = {
-    request_id: requestId,
-    message,
-    messages: history.length > 0 ? history : undefined,
-  };
-
-  const res = await fetch(`${base}/analyze`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    return {
-      summary: `Error del servidor: ${res.status}. ${text.slice(0, 200)}`,
-    };
-  }
-
-  const data = (await res.json()) as AnalyzeResponse;
-  if (data.status === "error") {
-    return {
-      summary: data.summary || "El análisis no pudo completarse.",
-    };
-  }
-
-  const hasImage = (data.artifacts ?? []).some((a) => a.type === "image");
-  const imageUrl = hasImage ? `${base}/artifacts/${data.request_id}/image` : undefined;
-
-  return {
-    summary: data.summary,
-    ...(imageUrl && { imageUrl }),
-  };
-}
 
 export async function sendMessageStream(
   message: string,
   conversationId: string,
   history: { role: "user" | "assistant"; content: string }[],
-  onEvent: (event: StreamEvent) => void
+  onEvent: (event: StreamEvent) => void,
+  viewSnapshot?: { ra_deg: number; dec_deg: number; size_arcmin: number; hips_id: string; image_data?: string }
 ): Promise<void> {
   const base = API_BASE.replace(/\/$/, "");
   if (!base) {
@@ -97,6 +53,14 @@ export async function sendMessageStream(
     request_id: requestId,
     message,
     messages: history.length > 0 ? history : undefined,
+    ...(viewSnapshot && {
+      task: "morphology_summary",
+      view_ra_deg: viewSnapshot.ra_deg,
+      view_dec_deg: viewSnapshot.dec_deg,
+      view_size_arcmin: viewSnapshot.size_arcmin,
+      view_hips_id: viewSnapshot.hips_id,
+      ...(viewSnapshot.image_data && { image_data: viewSnapshot.image_data }),
+    }),
   };
 
   const res = await fetch(`${base}/analyze/stream`, {

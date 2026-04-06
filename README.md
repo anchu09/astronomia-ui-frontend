@@ -1,41 +1,41 @@
 # astronomIA UI (Frontend)
 
-Interfaz de chat para análisis de galaxias. El usuario escribe consultas en lenguaje natural ("Muéstrame M51 en infrarrojo") y recibe imágenes, análisis morfológicos y un visor interactivo del cielo con Aladin Lite.
+Chat interface for astronomical image analysis. Users write natural-language queries ("Show me M51 in infrared") and receive multi-band images, morphological analysis results, and an interactive sky viewer powered by Aladin Lite.
 
-## Funcionalidades
+## Features
 
-- **Chat conversacional** con historial de conversaciones (localStorage).
-- **Streaming SSE** de respuestas del backend: estados de progreso, resumen, imagen y coordenadas.
-- **Visor interactivo** (Aladin Lite v3): exploración del cielo con zoom, pan y cambio de survey en vivo. 13 surveys agrupados por banda electromagnética (rayos X, UV, óptico, IR, radio).
-- **Metadatos SIMBAD**: tipo de objeto, morfología, velocidad radial, redshift — mostrados como badges bajo el mensaje.
-- **Indicador HST/JWST**: si existen observaciones del Hubble o JWST para la galaxia, se muestra un badge con colección, instrumento y filtros, con link al preview.
-- **Imágenes estáticas** del análisis (segmentación, medidas) junto al visor interactivo.
-- **Login demo** por email (localStorage, sin autenticación real).
+- **Conversational chat** with persistent conversation history (localStorage).
+- **SSE streaming** from the backend: progress status, summary text, image and coordinates.
+- **Interactive sky viewer** (Aladin Lite v3): pan, zoom, and live survey switching across 13 surveys spanning X-ray, UV, optical, IR, and radio bands.
+- **SIMBAD metadata**: object type, morphology, radial velocity, redshift — displayed as badges below each message.
+- **HST/JWST indicator**: if Hubble or JWST observations exist for the target, a badge shows collection, instrument, filters and a preview link.
+- **Static analysis images** (segmentation, measurements) alongside the interactive viewer.
+- **Demo login** by email (localStorage, no real authentication).
 
-## Requisitos
+## Requirements
 
 - Node 18+
 - npm
 
-## Desarrollo
+## Local development
 
 ```bash
 npm install
-cp .env.example .env   # o crear .env con VITE_API_URL
+cp .env.example .env   # set VITE_API_URL
 npm run dev
 ```
 
-Abre `http://localhost:5173`. Login con cualquier email.
+Open `http://localhost:5173`. Log in with any email address.
 
-## Conexión con el backend
+## Backend connection
 
-El frontend se conecta al **BFF** (astronomia-ui-backend), que a su vez conecta con la Galaxy API.
+The frontend connects to the **BFF** (astronomia-ui-backend), which in turn connects to the Galaxy API.
 
 ```
 Frontend (:5173)  →  BFF (:3000)  →  Galaxy API (:8000)
 ```
 
-En `.env`:
+In `.env`:
 
 ```env
 VITE_API_URL=http://localhost:3000
@@ -44,70 +44,62 @@ VITE_API_URL=http://localhost:3000
 ## Build
 
 ```bash
-npm run build      # salida en dist/
-npm run preview    # previsualizar el build
+npm run build      # output in dist/
+npm run preview    # preview the production build
 ```
 
 **Docker:**
 
 ```bash
-docker compose up --build   # nginx en :5173
+docker compose up --build   # nginx on :5173
 ```
 
-## Estructura
+## Project structure
 
 ```
 src/
 ├── components/
-│   ├── AladinViewer.tsx   # Visor interactivo Aladin Lite (WebGL2/WASM)
-│   ├── ChatMessage.tsx    # Mensaje con imagen, visor, badges SIMBAD/HST (lazy-loaded)
-│   ├── ChatInput.tsx      # Input de texto
-│   └── Sidebar.tsx        # Lista de conversaciones
+│   ├── AladinViewer.tsx   # Interactive sky viewer — Aladin Lite (WebGL2/WASM, lazy-loaded)
+│   ├── ChatMessage.tsx    # Message with image, viewer and SIMBAD/HST badges
+│   ├── ChatInput.tsx      # Text input
+│   └── Sidebar.tsx        # Conversation list
 ├── lib/
-│   ├── api.ts             # Cliente SSE: parseo de eventos (status, summary, artifacts, end, error)
-│   ├── conversations.ts   # CRUD de conversaciones en localStorage
-│   └── auth.ts            # Login demo (email en localStorage)
+│   ├── api.ts             # SSE client: parses status, summary, artifacts, end, error events
+│   ├── conversations.ts   # Conversation CRUD (localStorage)
+│   └── auth.ts            # Demo login (email stored in localStorage)
 ├── pages/
-│   ├── Chat.tsx           # Página principal: sidebar + mensajes + input
-│   └── Login.tsx          # Pantalla de login
+│   ├── Chat.tsx           # Main page: sidebar + messages + input
+│   └── Login.tsx          # Login screen
 ├── types/
 │   ├── chat.ts            # Message, Conversation, AladinCoordinates, ObjectInfo, HstJwstInfo
-│   └── aladin-lite.d.ts   # Type declarations para aladin-lite
-├── App.tsx                # Router con rutas protegidas
-├── main.tsx               # Entry point React
-└── index.css              # Tailwind + tema oscuro
+│   └── aladin-lite.d.ts   # Type declarations for aladin-lite
+├── App.tsx                # Router with protected routes
+├── main.tsx               # React entry point
+└── index.css              # Tailwind + dark theme
 ```
 
 ### Aladin Lite
 
-El visor se carga bajo demanda (`React.lazy` + `Suspense`) para no incluir los ~2.4 MB de WASM en el bundle principal. Requiere **WebGL2** (hardware acceleration activado en el navegador). Si WebGL2 no está disponible, muestra un link directo a Aladin Lite web con las coordenadas.
+Loaded on demand (`React.lazy` + `Suspense`) to keep the ~2.4 MB WASM payload out of the main bundle. Requires **WebGL2**. If unavailable, a direct link to Aladin Lite web with the target coordinates is shown instead.
 
-Surveys disponibles en el visor, ordenados por frecuencia:
-
-| Banda | Surveys |
-|-------|---------|
-| Rayos X | XMM, RASS |
+| Band | Surveys |
+|------|---------|
+| X-ray | XMM, RASS |
 | UV | GALEX FUV, GALEX NUV |
-| Óptico | DSS2, SDSS, PanSTARRS, DECaLS |
+| Optical | DSS2, SDSS, PanSTARRS, DECaLS |
 | IR | 2MASS, WISE |
 | Radio | NVSS |
 
-### Protocolo SSE
+### SSE protocol
 
-El frontend consume eventos SSE del BFF:
-
-| Evento | Contenido | Uso |
-|--------|-----------|-----|
-| `status` | `message` | Indicador de progreso |
-| `summary` | `summary` | Texto del asistente |
-| `artifacts` | `request_id`, `image_url`, `coordinates`, `object_info`, `hst_jwst` | Imagen + visor + metadatos |
-| `end` | `summary`, `coordinates`, `object_info`, `hst_jwst` | Cierre del stream |
-| `error` | `message` | Error a mostrar |
+| Event | Fields | Purpose |
+|-------|--------|---------|
+| `status` | `message` | Progress indicator |
+| `summary` | `summary` | Assistant text response |
+| `artifacts` | `request_id`, `image_url`, `coordinates`, `object_info`, `hst_jwst` | Image + viewer + metadata |
+| `end` | `summary`, `coordinates`, `object_info`, `hst_jwst` | Stream close |
+| `error` | `message` | Error to display |
 
 ## Stack
 
-- React 18 + TypeScript 5.6
-- Vite 5
-- Tailwind CSS 3
-- Aladin Lite 3.8 (WASM/WebGL2)
-- React Router 6
+- React 18 + TypeScript 5.6 · Vite 5 · Tailwind CSS 3 · Aladin Lite 3.8 · React Router 6
